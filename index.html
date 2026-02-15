@@ -1,75 +1,89 @@
-<!doctype html><html><head><style type="text/css">body {
-  margin: 0;
-  overflow: hidden;
-  height: 100vh;
-  width: 100%;
-  background-color: black;
-}
-iframe {
-  border: 0;
-  width: 100%;
-  height: calc(100% - 60px);
-}</style></head><body><iframe id="iframe"></iframe>
-<button onclick="newThingy(chapter - 1)" id="back">back</button>
-<button onclick="newThingy()" id="next">next</button>
-<input id="chapter" type="number" onchange="newThingy(this.value)">
+<!doctype html>
+<html>
 
-<script type="text/javascript">async function fetchExternalHtml(url) {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+<head>
+  <meta name="google-site-verification" content="v0cs50DFoPavKfRuxbFauBUTL7i_y_9vGlvFIpzzs7Q" />
+  <style type="text/css">
+    body {
+      margin: 0;
+      overflow: hidden;
+      height: 100vh;
+      width: 100%;
+      background-color: black;
     }
-    return await response.text(); // Return the text directly
-  } catch (error) {
-    console.error('Fetch error:', error);
-  }
-}
-const backButton = document.getElementById("back")
-const nextButton = document.getElementById("next")
-let chapter = 0
-function newThingy(ch) {
-  if (chapter == 0 && localStorage.getItem("chapter")) {
-    chapter = localStorage.getItem("chapter")
-  } else {
 
-    if (ch) {
-      chapter = ch
-    } else {
-
-      chapter++
+    iframe {
+      border: 0;
+      width: 100%;
+      height: calc(100% - 60px);
     }
-  }
-  if (chapter == 1) {
-    backButton.disabled = true
-  } else {
-    backButton.disabled = false
-  }
-  localStorage.setItem("chapter", chapter)
-  const input = document.getElementById("chapter")
-  input.value = chapter
-  fetchExternalHtml('https://novelhi.com/s/Spare-Me-Great-Lord/' + chapter)
-    .then((htmlContent) => {
-      if (htmlContent) {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(htmlContent, 'text/html');
+  </style>
+</head>
 
-        const paragraphs = Array.from(doc.querySelectorAll("sent"))
-          .map(p => p.innerText)
-          .join("\n\n");
+<body><iframe id="iframe"></iframe>
+  <button onclick="newThingy(chapter - 1)" id="back">back</button>
+  <button onclick="newThingy()" id="next">next</button>
+  <input id="chapter" type="number" onchange="newThingy(this.value)">
 
-
-        const iframe = document.getElementById("iframe");
-        iframe.srcdoc = paragraphs + '<style>body { background-color: black; color: white; white-space: pre-wrap; font-family: sans-serif; }</style>';
+  <script type="text/javascript">async function fetchExternalHtml(url) {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.text(); // Return the text directly
+      } catch (error) {
+        console.error('Fetch error:', error);
       }
-    });
-}
-newThingy()
-window.addEventListener('keydown', e => {
-  if (e.key === 'ArrowLeft') {
-    backButton.click()
-  }
-  if (e.key === 'ArrowRight') {
-    nextButton.click()
-  }
-})</script></body><html>
+    }
+    const backButton = document.getElementById("back")
+    const nextButton = document.getElementById("next")
+    let chapter = 0
+    function newThingy(ch) {
+      if (chapter == 0 && localStorage.getItem("chapter")) {
+        chapter = localStorage.getItem("chapter")
+      } else {
+
+        if (ch) {
+          chapter = ch
+        } else {
+
+          chapter++
+        }
+      }
+      if (chapter == 1) {
+        backButton.disabled = true
+      } else {
+        backButton.disabled = false
+      }
+      localStorage.setItem("chapter", chapter)
+      const input = document.getElementById("chapter")
+      input.value = chapter
+      fetchExternalHtml('https://novelhi.com/s/Spare-Me-Great-Lord/' + chapter)
+        .then((htmlContent) => {
+          if (htmlContent) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlContent, 'text/html');
+
+            const paragraphs = Array.from(doc.querySelectorAll("sent"))
+              .map(p => p.innerText)
+              .join("\n\n");
+
+
+            const iframe = document.getElementById("iframe");
+            iframe.srcdoc = paragraphs + '<style>body { background-color: black; color: white; white-space: pre-wrap; font-family: sans-serif; }</style>';
+          }
+        });
+    }
+    newThingy()
+    window.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft') {
+        backButton.click()
+      }
+      if (e.key === 'ArrowRight') {
+        nextButton.click()
+      }
+
+    })</script>
+</body>
+<html>
