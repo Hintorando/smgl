@@ -1,102 +1,161 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 
 <head>
-  <meta name="google-site-verification" content="v0cs50DFoPavKfRuxbFauBUTL7i_y_9vGlvFIpzzs7Q" />
-  <style type="text/css">
-    body {
-      margin: 0;
-      overflow: hidden;
-      height: 100vh;
-      width: 100%;
-      background-color: black;
-    }
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="google-site-verification" content="v0cs50DFoPavKfRuxbFauBUTL7i_y_9vGlvFIpzzs7Q" />
+	<title>Chapter Reader</title>
+	<style type="text/css">
+		body {
+			margin: 0;
+			overflow: hidden;
+			height: 100vh;
+			width: 100%;
+			background-color: black;
+			color: white;
+			font-family: sans-serif;
+			display: flex;
+			flex-direction: column;
+		}
 
-    iframe {
-      border: 0;
-      width: 100%;
-      height: calc(100% - 60px);
-    }
-  </style>
+		#iframe {
+			border: 0;
+			width: 100%;
+			flex-grow: 1;
+		}
+
+		.controls {
+			height: 60px;
+			background: #222;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 10px;
+			padding: 0 10px;
+		}
+
+		input[type="number"] {
+			width: 50px;
+		}
+	</style>
 </head>
 
-<body><iframe id="iframe"></iframe>
-<button onclick="newThingy(chapter - 1)" id="back">back</button>
-<button onclick="newThingy()" id="next">next</button>
-<input id="chapter" type="number" onchange="newThingy(this.value)">
-<input id="textColor" type="color" onchange="changeColor('textColor', this.value)">
-<input id="backgroundColor" type="color" onchange="changeColor('backgroundColor', this.value)">
+<body>
 
-  <script type="text/javascript">
-    document.body.style.backgroundColor = localStorage.getItem("backgroundColor")
+	<iframe id="iframe"></iframe>
+
+	<div class="controls">
+		<button onclick="newThingy(chapter - 1)" id="back">Back</button>
+		<input id="chapterInput" type="number" onchange="newThingy(parseInt(this.value))">
+		<button onclick="newThingy(chapter + 1)" id="next">Next</button>
+
+		<label for="textColor">Text:</label>
+		<input id="textColor" type="color" onchange="changeColor('textColor', this.value)">
+
+		<label for="backgroundColor">BG:</label>
+		<input id="backgroundColor" type="color" onchange="changeColor('backgroundColor', this.value)">
+  </div>
+
+		<script type="text/javascript">
+    let chapter = parseInt(localStorage.getItem("chapter")) || 1;
+    
+    // get ui colors from local storage
+    const savedBG = localStorage.getItem("backgroundColor") || "#000000";
+    const savedText = localStorage.getItem("textColor") || "#ffffff";
+    
+    document.body.style.backgroundColor = savedBG;
+    document.getElementById("backgroundColor").value = savedBG;
+    document.getElementById("textColor").value = savedText;
+    document.getElementById("chapterInput").value = chapter;
+
+
     async function fetchExternalHtml(url) {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        return await response.text();
+      } catch (error) {
+        console.error('Fetch error:', error);
+        return null;
+      }
     }
-    return await response.text(); // Return the text directly
-  } catch (error) {
-    console.error('Fetch error:', error);
-  }
-}
-const backButton = document.getElementById("back")
-const nextButton = document.getElementById("next")
-let chapter = 0
-function newThingy(ch) {
-  if (chapter == 0 && localStorage.getItem("chapter")) {
-    chapter = localStorage.getItem("chapter")
-  } else {
 
-    if (ch) {
-      chapter = ch
-    } else {
+    function updateIframeStyles() {
+      const iframe = document.getElementById("iframe");
+      const textColor = localStorage.getItem("textColor") || "white";
+      const backgroundColor = localStorage.getItem("backgroundColor") || "black";
 
-      chapter++
+      if (iframe.contentDocument && iframe.contentDocument.body) {
+        iframe.contentDocument.body.style.backgroundColor = backgroundColor;
+        iframe.contentDocument.body.style.color = textColor;
+      }
     }
-  }
-  if (chapter == 1) {
-    backButton.disabled = true
-  } else {
-    backButton.disabled = false
-  }
-  localStorage.setItem("chapter", chapter)
-  const input = document.getElementById("chapter")
-  input.value = chapter
-  fetchExternalHtml('https://novelhi.com/s/Spare-Me-Great-Lord/' + chapter)
-    .then((htmlContent) => {
+
+    function changeColor(type, value) {
+      localStorage.setItem(type, value);
+      if (type === "backgroundColor") {
+        document.body.style.backgroundColor = value;
+      }
+      updateIframeStyles();
+    }
+
+    async function newThingy(ch) {
+      // update the global ch
+      if (ch !== undefined) {
+        chapter = ch;
+      }
+      
+      if (chapter < 1) chapter = 1;
+
+      // Update UI elements
+      localStorage.setItem("chapter", chapter);
+      document.getElementById("chapterInput").value = chapter;
+      document.getElementById("back").disabled = (chapter <= 1);
+
+      // fetch the thingy
+      const url = 'https://novelhi.com/s/Spare-Me-Great-Lord/' + chapter;
+      const htmlContent = await fetchExternalHtml(url);
+
       if (htmlContent) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(htmlContent, 'text/html');
-
+        
+        // extract text
         const paragraphs = Array.from(doc.querySelectorAll("sent"))
           .map(p => p.innerText)
           .join("\n\n");
 
-        const textColor = localStorage.getItem("textColor")
-        const backgroundColor = localStorage.getItem("backgroundColor")
+        const textColor = localStorage.getItem("textColor") || "white";
+        const backgroundColor = localStorage.getItem("backgroundColor") || "black";
+        
         const iframe = document.getElementById("iframe");
-        iframe.srcdoc = paragraphs + `<style>body { background-color: ${backgroundColor||"black"}; color: ${textColor||"white"}; white-space: pre-wrap; font-family: sans-serif; }</style>`;
+        iframe.srcdoc = `
+          <html>
+            <style>
+              body { 
+                background-color: ${backgroundColor}; 
+                color: ${textColor}; 
+                white-space: pre-wrap; 
+                font-family: sans-serif; 
+                padding: 20px;
+              }
+            </style>
+            <body>${paragraphs}</body>
+          </html>`;
       }
+    }
+
+    // makes it so i can use arrows to nav
+    window.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft') document.getElementById("back").click();
+      if (e.key === 'ArrowRight') document.getElementById("next").click();
     });
-}
-newThingy()
-window.addEventListener('keydown', e => {
-  if (e.key === 'ArrowLeft') {
-    backButton.click()
-  }
-  if (e.key === 'ArrowRight') {
-    nextButton.click()
-  }
-})
 
-function changeColor(type, value) {
-  localStorage.setItem(type, value)
-  if (type == "backgroundColor") document.body.style.backgroundColor = value
-}
-  </script>
+    // run when on the load
+    newThingy(chapter);
+
+		</script>
 </body>
-<html>
 
-
-
+</html>
