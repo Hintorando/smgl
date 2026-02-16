@@ -25,8 +25,8 @@
 <button onclick="newThingy(chapter - 1)" id="back">back</button>
 <button onclick="newThingy()" id="next">next</button>
 <input id="chapter" type="number" onchange="newThingy(this.value)">
-<input id="textColor" type="number" onchange="changeColor('textColor', this.value)">
-<input id="backgroundColor" type="number" onchange="changeColor('backgroundColor', this.value)">
+<input id="textColor" type="color" onchange="changeColor('textColor', this.value)">
+<input id="backgroundColor" type="color" onchange="changeColor('backgroundColor', this.value)">
 
   <script type="text/javascript">
     document.body.style.backgroundColor = localStorage.getItem("backgroundColor")
@@ -98,4 +98,5 @@ function changeColor(type, value) {
   </script>
 </body>
 <html>
+
 
