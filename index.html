@@ -63,14 +63,14 @@
     let cors = ''
 			    let corsProxy = document.getElementById("corsProxy")
 			if(localStorage.getItem("cors")=="true"){
-				cors="https://cors-anywhere.com/"
+				cors="https://api.codetabs.com/v1/proxy?quest="
 				corsProxy.checked = true
 			}
 
     corsProxy.addEventListener("change", function(e) {
       if (this.checked) {
 		  		localStorage.setItem("cors","true")
-        cors = "https://cors-anywhere.com/"
+        cors = "https://api.codetabs.com/v1/proxy?quest="
       } else {
 		  		localStorage.setItem("cors","false")
         cors = ''
@@ -179,5 +179,6 @@
 </body>
 
 </html>
+
 
 
