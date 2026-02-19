@@ -1,32 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chapter Reader (Puter Edition)</title>
-  <script src="https://js.puter.com/v2/"></script>
+  <title>Chapter Reader</title>
   <style type="text/css">
-    * { box-sizing: border-box; }
+    /* Reset and Grid Layout */
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      margin: 0; padding: 0; height: 100vh; width: 100%;
-      background-color: black; color: white; font-family: 'Segoe UI', sans-serif;
-      display: grid; grid-template-rows: 1fr 70px; overflow: hidden;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      width: 100%;
+      background-color: black;
+      color: white;
+      font-family: sans-serif;
+      display: grid;
+      /* Reader takes available space, controls take exactly 70px */
+      grid-template-rows: 1fr 70px;
+      overflow: hidden;
     }
-    #iframe { border: none; width: 100%; height: 100%; }
+
+    #iframe {
+      border: none;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Controls Bar Styling */
     .controls {
-      height: 70px; background: #1a1a1a; display: flex;
-      align-items: center; justify-content: space-around;
-      padding: 0 10px; border-top: 1px solid #333;
+      height: 70px;
+      background: #1a1a1a;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 0 10px;
+      border-top: 1px solid #333;
     }
-    .control-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-    button { padding: 8px 12px; background: #444; color: white; border: none; border-radius: 4px; cursor: pointer; }
-    button:hover { background: #555; }
-    button:disabled { opacity: 0.3; cursor: not-allowed; }
-    input, select { background: #333; color: white; border: 1px solid #555; text-align: center; border-radius: 4px; padding: 2px; }
-    input[type="number"] { width: 55px; }
-    label { font-size: 10px; color: #888; text-transform: uppercase; font-weight: bold; }
+
+    .control-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    button {
+      padding: 8px 12px;
+      background: #444;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #555;
+    }
+
+    button:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    input[type="number"] {
+      width: 50px;
+      background: #333;
+      color: white;
+      border: 1px solid #555;
+      text-align: center;
+    }
+
+    label {
+      font-size: 10px;
+      color: #888;
+      text-transform: uppercase;
+    }
   </style>
 </head>
+
 <body>
 
   <iframe id="iframe"></iframe>
@@ -42,15 +98,6 @@
     <button onclick="newThingy(chapter + 1)" id="next">Next</button>
 
     <div class="control-item">
-      <label>Method</label>
-      <select id="fetchMethod" onchange="updateMethod(this.value)">
-        <option value="direct">Browser (Normal)</option>
-        <option value="proxy">CORS Proxy Server</option>
-        <option value="puter">Puter SDK (Client)</option>
-      </select>
-    </div>
-
-    <div class="control-item">
       <label>Text</label>
       <input id="textColor" type="color" onchange="changeColor('textColor', this.value)">
     </div>
@@ -59,133 +106,166 @@
       <label>BG</label>
       <input id="backgroundColor" type="color" onchange="changeColor('backgroundColor', this.value)">
     </div>
+
+    <div class="control-item">
+      <label>Proxy</label>
+      <input id="corsProxy" type="checkbox">
+    </div>
   </div>
 
   <script type="text/javascript">
+    /* Your script remains exactly as provided */
+    // --- 1. INITIAL STATE & SETTINGS ---
     let chapter = parseInt(localStorage.getItem("chapter")) || 1;
-    let currentMethod = localStorage.getItem("fetchMethod") || "puter";
-    const proxyUrl = "https://cors-anywhere.com/";
+    let isCorsEnabled = localStorage.getItem("cors") === "true";
+    let cors = isCorsEnabled ? "https://cors-anywhere.com/" : "";
 
+    // UI Elements
     const iframe = document.getElementById("iframe");
     const chapterInput = document.getElementById("chapterInput");
-    const methodSelect = document.getElementById("fetchMethod");
+    const corsCheckbox = document.getElementById("corsProxy");
     const backBtn = document.getElementById("back");
 
-    // Init UI
-    methodSelect.value = currentMethod;
+    // Sync Checkbox UI on load
+    corsCheckbox.checked = isCorsEnabled;
 
-    function updateMethod(val) {
-      currentMethod = val;
-      localStorage.setItem("fetchMethod", val);
+
+    // CORS Toggle logic
+    corsCheckbox.addEventListener("change", function () {
+      isCorsEnabled = this.checked;
+      localStorage.setItem("cors", isCorsEnabled);
+      cors = isCorsEnabled ? "https://cors-anywhere.com/" : "";
+
+      // Refresh the chapter with the new proxy setting
       newThingy(chapter);
+    });
+
+    // --- 2. EVENT LISTENERS ---
+
+    // Logic to change chapters (reusable)
+    function navigate(direction) {
+      if (direction === 'back' && !backBtn.disabled) newThingy(chapter - 1);
+      if (direction === 'next') newThingy(chapter + 1);
     }
 
-    // Key Nav
+    // Global Keyboard Navigation
     window.addEventListener('keydown', e => {
-      if (e.key === 'ArrowLeft' && chapter > 1) newThingy(chapter - 1);
-      if (e.key === 'ArrowRight') newThingy(chapter + 1);
+      if (e.key === 'ArrowLeft') navigate('back');
+      if (e.key === 'ArrowRight') navigate('next');
     });
 
+    // Listen for messages from the iframe
     window.addEventListener('message', e => {
-      if (e.data === 'goBack' && chapter > 1) newThingy(chapter - 1);
-      if (e.data === 'goNext') newThingy(chapter + 1);
+      if (e.data === 'goBack') navigate('back');
+      if (e.data === 'goNext') navigate('next');
     });
+
+    // --- 3. CORE FUNCTIONS ---
 
     async function fetchExternalHtml(url) {
       try {
-        renderIframe(`Fetching via ${currentMethod}...`, true);
-        let response;
+        // Show loading message inside the iframe
+        renderIframe(`Loading Chapter ${chapter}...`, true);
 
-        if (currentMethod === "puter") {
-          // Puter.js unrestricted fetch
-          response = await puter.net.fetch(url);
-        } else if (currentMethod === "proxy") {
-          // Traditional CORS proxy
-          response = await fetch(proxyUrl + url);
-          if (response.status === 403) {
-            renderIframe("Proxy needs activation. <a href='https://cors-anywhere.com/corsdemo' target='_blank' style='color:cyan'>Click here</a> then refresh.", true);
-            return null;
-          }
-        } else {
-          // Standard browser fetch
-          response = await fetch(url);
+        const response = await fetch(cors + url);
+
+        // Handle CORS Anywhere "Activation" requirement
+        if (response.status === 403 && isCorsEnabled) {
+          renderIframe("CORS Proxy needs activation. <a href='https://cors-anywhere.com/corsdemo' target='_blank' style='color:cyan'>Click here to activate</a> and then refresh this page.", true);
+          return null;
         }
 
-        if (!response.ok) throw new Error(`Status: ${response.status}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return await response.text();
-
       } catch (error) {
         console.error('Fetch error:', error);
-        renderIframe(`Failed: ${error.message}.<br>Try switching the Method to "Puter SDK".`, true);
+        renderIframe(`Failed to load: ${error.message}. Try toggling the CORS Proxy.`, true);
         return null;
       }
     }
 
     async function newThingy(ch) {
+      // Update Chapter State
       if (ch !== undefined) chapter = ch;
       if (chapter < 1) chapter = 1;
 
+      // Update LocalStorage & UI
       localStorage.setItem("chapter", chapter);
       chapterInput.value = chapter;
       backBtn.disabled = (chapter <= 1);
 
-      // Using the URL structure for the novel site
-      const url = `https://freewebnovel.com/spare-me-great-lord/chapter-${chapter}.html`;
+      // Fetch Content
+      const url = `https://freewebnovel.com/spare-me-great-lord/chapter-${chapter}`;
       const htmlContent = await fetchExternalHtml(url);
 
       if (htmlContent) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(htmlContent, 'text/html');
-        
-        // Target article paragraphs
-        const contentTags = doc.querySelectorAll('.detail-content p, #article p');
-        const paragraphs = Array.from(contentTags)
-          .map(p => p.innerText.trim())
-          .filter(text => text.length > 5)
-          .join("\n\n");
 
-        renderIframe(paragraphs || "Content not found. Check if the chapter exists.");
+        // Extraction Logic: Try 'sent' tags first, fallback to standard paragraphs
+        const contentTags = doc.querySelectorAll('#article p');
+        const paragraphs = Array.from(contentTags)
+          .slice(1)
+          .map(p => p.innerText.trim())
+          .filter(text => text.length > 0)
+          .join("\n\n")
+
+        renderIframe(paragraphs || "No text content found at this URL.");
       }
     }
 
     function renderIframe(content, isSystemMessage = false) {
       const textColor = localStorage.getItem("textColor") || "#ffffff";
       const backgroundColor = localStorage.getItem("backgroundColor") || "#000000";
+
       const alignment = isSystemMessage ? "center" : "left";
+      const displayMode = isSystemMessage ? "display:flex; justify-content:center; align-items:center; height:80vh;" : "";
 
       iframe.srcdoc = `
         <html>
-          <head>
-            <style>
-              body { 
-                background-color: ${backgroundColor}; color: ${textColor}; 
-                white-space: pre-wrap; font-family: 'Segoe UI', sans-serif; 
-                padding: 40px; font-size: 20px; line-height: 1.8;
-                max-width: 800px; margin: 0 auto; text-align: ${alignment};
-                ${isSystemMessage ? "display:flex; align-items:center; height:80vh; justify-content:center;" : ""}
-              }
-              a { color: cyan; }
-            </style>
-          </head>
-          <body>
-            ${content}
-            <script>
-              window.addEventListener('keydown', e => {
-                if (e.key === 'ArrowLeft') window.parent.postMessage('goBack', '*');
-                if (e.key === 'ArrowRight') window.parent.postMessage('goNext', '*');
-              });
-            <\/script>
-          </body>
+            <head>
+                <style>
+                    body { 
+                        background-color: ${backgroundColor}; 
+                        color: ${textColor}; 
+                        white-space: pre-wrap; 
+                        font-family: 'Segoe UI', Roboto, Helvetica, sans-serif; 
+                        padding: 40px;
+                        font-size: 20px;
+                        line-height: 1.7;
+                        max-width: 750px;
+                        margin: 0 auto;
+                        text-align: ${alignment};
+                        ${displayMode}
+                        cursor: text;
+                    }
+                </style>
+            </head>
+            <body>
+                ${content}
+                <script>
+                    window.addEventListener('keydown', e => {
+                        if (e.key === 'ArrowLeft') window.parent.postMessage('goBack', '*');
+                        if (e.key === 'ArrowRight') window.parent.postMessage('goNext', '*');
+                    });
+                <\/script>
+            </body>
         </html>`;
     }
 
+    // Helper to change colors and update immediately
     function changeColor(type, value) {
       localStorage.setItem(type, value);
+      if (type === "backgroundColor") {
+        document.body.style.backgroundColor = value;
+      }
+      // Re-render the current content with new colors
       newThingy(chapter);
     }
 
-    // Start App
+    // START THE APP
     newThingy(chapter);
   </script>
 </body>
+
 </html>
