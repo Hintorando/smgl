@@ -79,7 +79,7 @@
       <label>Proxy Mode</label>
       <select id="proxySelect" onchange="changeProxy(this.value)">
         <option value="none">None</option>
-        <option value="cors-anywhere">CORS Anywhere</option>
+        <option value="codetabs">CodeTabs</option>
         <option value="google">Google Script</option>
       </select>
     </div>
@@ -127,8 +127,8 @@
 
         const response = await fetch(finalUrl, options);
 
-        if (response.status === 403 && proxyMode === "cors-anywhere") {
-          renderIframe("Proxy activation required. <a href='https://cors-anywhere.herokuapp.com/corsdemo' target='_blank' style='color:cyan'>Click here to activate</a> and refresh.", true);
+        if (response.status === 403 && proxyMode === "codetabs") {
+          renderIframe(oops didnt work", true);
           return null;
         }
 
@@ -224,4 +224,5 @@
   </script>
 </body>
 </html>
+
 
