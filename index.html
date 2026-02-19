@@ -87,142 +87,115 @@
 
   <script type="text/javascript">
     // --- 1. INITIAL STATE ---
-    let chapter = parseInt(localStorage.getItem("chapter")) || 1;
-    let proxyMode = localStorage.getItem("proxyMode") || "none";
-    
-    // UI Elements
-    const iframe = document.getElementById("iframe");
-    const chapterInput = document.getElementById("chapterInput");
-    const proxySelect = document.getElementById("proxySelect");
-    const backBtn = document.getElementById("back");
+let chapter = parseInt(localStorage.getItem("chapter")) || 1;
+let proxyMode = localStorage.getItem("proxyMode") || "none";
+let currentChapterText = ""; // Store text to allow color changes without re-fetching
 
-    // Sync UI
+const iframe = document.getElementById("iframe");
+const chapterInput = document.getElementById("chapterInput");
+const proxySelect = document.getElementById("proxySelect");
+const backBtn = document.getElementById("back");
+
+// Sync UI on Load
+window.addEventListener('DOMContentLoaded', () => {
     proxySelect.value = proxyMode;
-    document.getElementById("textColor").value = localStorage.getItem("textColor") || "#ffffff";
-    document.getElementById("backgroundColor").value = localStorage.getItem("backgroundColor") || "#000000";
+    const txt = localStorage.getItem("textColor") || "#ffffff";
+    const bg = localStorage.getItem("backgroundColor") || "#000000";
+    document.getElementById("textColor").value = txt;
+    document.getElementById("backgroundColor").value = bg;
+    document.body.style.backgroundColor = bg;
+});
 
-    // --- 2. LOGIC ---
+// --- 2. LOGIC ---
 
-    function changeProxy(val) {
-      proxyMode = val;
-      localStorage.setItem("proxyMode", val);
-      newThingy(chapter);
-    }
-
-    async function fetchExternalHtml(url) {
-      try {
+async function fetchExternalHtml(url) {
+    try {
         renderIframe(`Loading Chapter ${chapter}...`, true);
-        
         let finalUrl = url;
-        let options = { method: 'GET' };
-
-        // Handle Proxy Selection
+        
         if (proxyMode === "codetabs") {
-          finalUrl = "https://api.codetabs.com/v1/proxy?quest=" + url;
+            finalUrl = "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url);
         } else if (proxyMode === "google") {
-          const proxyBase = "https://script.google.com/macros/s/AKfycby03WWSHq6xjYdaRkaZcRiaPe8jKf4WevwDkiJrJwWY4nkQYUaBnRF1g_L7Ca33DOi-Mg/exec";
-          finalUrl = `${proxyBase}?url=${encodeURIComponent(url)}`;
-          options.credentials = 'omit'; // Critical for Google Apps Script
+            const proxyBase = "https://script.google.com/macros/s/AKfycby03WWSHq6xjYdaRkaZcRiaPe8jKf4WevwDkiJrJwWY4nkQYUaBnRF1g_L7Ca33DOi-Mg/exec";
+            finalUrl = `${proxyBase}?url=${encodeURIComponent(url)}`;
         }
 
-        const response = await fetch(finalUrl, options);
-
-        if (response.status === 403 && proxyMode === "codetabs") {
-          renderIframe(oops didnt work", true);
-          return null;
-        }
-
+        const response = await fetch(finalUrl);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return await response.text();
-      } catch (error) {
-        console.error('Fetch error:', error);
-        renderIframe(`Failed: ${error.message}. Try changing Proxy Mode.`, true);
+    } catch (error) {
+        renderIframe(`Error: ${error.message}. Try a different Proxy Mode.`, true);
         return null;
-      }
     }
+}
 
-    async function newThingy(ch) {
-      if (ch !== undefined) chapter = ch;
-      if (chapter < 1) chapter = 1;
+async function newThingy(ch) {
+    if (ch !== undefined) chapter = ch;
+    if (chapter < 1) chapter = 1;
 
-      localStorage.setItem("chapter", chapter);
-      chapterInput.value = chapter;
-      backBtn.disabled = (chapter <= 1);
+    localStorage.setItem("chapter", chapter);
+    chapterInput.value = chapter;
+    backBtn.disabled = (chapter <= 1);
 
-      const url = `https://freewebnovel.com/spare-me-great-lord/chapter-${chapter}.html`;
-      const htmlContent = await fetchExternalHtml(url);
+    // Dynamic URL - Note: Some sites use /chapter-1/ instead of /chapter-1.html
+    const url = `https://freewebnovel.com/spare-me-great-lord/chapter-${chapter}.html`;
+    const htmlContent = await fetchExternalHtml(url);
 
-      if (htmlContent) {
+    if (htmlContent) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(htmlContent, 'text/html');
 
-        // Target content container for FreeWebNovel
-        const contentTags = doc.querySelectorAll('#article p');
-        const paragraphs = Array.from(contentTags)
-          .slice(1)
-          .map(p => p.innerText.trim())
-          .filter(text => text.length > 0)
-          .join("\n\n");
+        // Better selector: look for the article body specifically
+        const contentTags = doc.querySelectorAll('.txt p, #article p');
+        currentChapterText = Array.from(contentTags)
+            .map(p => p.innerText.trim())
+            .filter(text => text.length > 3) // Filter out tiny fragments/ads
+            .join("\n\n");
 
-        renderIframe(paragraphs || "No text content found. The site might be blocking the proxy.");
-      }
+        renderIframe(currentChapterText || "Content not found. Proxy might be blocked.");
     }
+}
 
-    function renderIframe(content, isSystemMessage = false) {
-      const textColor = localStorage.getItem("textColor") || "#ffffff";
-      const backgroundColor = localStorage.getItem("backgroundColor") || "#000000";
-      const alignment = isSystemMessage ? "center" : "left";
+function renderIframe(content, isSystemMessage = false) {
+    const textColor = localStorage.getItem("textColor") || "#ffffff";
+    const backgroundColor = localStorage.getItem("backgroundColor") || "#000000";
+    const alignment = isSystemMessage ? "center" : "left";
 
-      iframe.srcdoc = `
+    iframe.srcdoc = `
         <html>
-          <head>
-            <style>
-              body { 
-                background-color: ${backgroundColor}; 
-                color: ${textColor}; 
-                white-space: pre-wrap; 
-                font-family: sans-serif; 
-                padding: 40px; font-size: 20px; line-height: 1.7;
-                max-width: 800px; margin: 0 auto;
-                text-align: ${alignment};
-              }
-              a { color: cyan; }
-            </style>
-          </head>
-          <body>
-            ${content}
-            <script>
-              window.addEventListener('keydown', e => {
-                if (e.key === 'ArrowLeft') window.parent.postMessage('goBack', '*');
-                if (e.key === 'ArrowRight') window.parent.postMessage('goNext', '*');
-              });
-            <\/script>
-          </body>
+            <body style="background:${backgroundColor}; color:${textColor}; font-family:sans-serif; padding:40px; font-size:20px; line-height:1.7; max-width:800px; margin:0 auto; white-space:pre-wrap; text-align:${alignment};">
+                ${content}
+                <script>
+                    window.onkeydown = e => {
+                        if (e.key === 'ArrowLeft') window.parent.postMessage('goBack', '*');
+                        if (e.key === 'ArrowRight') window.parent.postMessage('goNext', '*');
+                    };
+                <\/script>
+            </body>
         </html>`;
-    }
+}
 
-    function changeColor(type, value) {
-      localStorage.setItem(type, value);
-      if (type === "backgroundColor") document.body.style.backgroundColor = value;
-      // Re-render only if content exists
-      renderIframe(iframe.srcdoc.split('<body>')[1].split('<script>')[0].trim());
-    }
+function changeColor(type, value) {
+    localStorage.setItem(type, value);
+    if (type === "backgroundColor") document.body.style.backgroundColor = value;
+    renderIframe(currentChapterText || "No content loaded");
+}
 
-    // Keyboard & Message Listeners
-    window.addEventListener('keydown', e => {
-      if (e.key === 'ArrowLeft' && chapter > 1) newThingy(chapter - 1);
-      if (e.key === 'ArrowRight') newThingy(chapter + 1);
-    });
+// Global Listeners
+window.onkeydown = e => {
+    if (e.key === 'ArrowLeft' && chapter > 1) newThingy(chapter - 1);
+    if (e.key === 'ArrowRight') newThingy(chapter + 1);
+};
 
-    window.addEventListener('message', e => {
-      if (e.data === 'goBack' && chapter > 1) newThingy(chapter - 1);
-      if (e.data === 'goNext') newThingy(chapter + 1);
-    });
+window.onmessage = e => {
+    if (e.data === 'goBack') newThingy(chapter - 1);
+    if (e.data === 'goNext') newThingy(chapter + 1);
+};
 
-    // Init
-    newThingy(chapter);
+newThingy(chapter);
   </script>
 </body>
 </html>
+
 
 
