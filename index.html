@@ -7,79 +7,47 @@
   <title>Chapter Reader</title>
   <style type="text/css">
     /* Reset and Grid Layout */
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
-      margin: 0;
-      padding: 0;
-      height: 100vh;
-      width: 100%;
-      background-color: black;
-      color: white;
+      margin: 0; padding: 0;
+      height: 100vh; width: 100%;
+      background-color: black; color: white;
       font-family: sans-serif;
       display: grid;
-      /* Reader takes available space, controls take exactly 70px */
       grid-template-rows: 1fr 70px;
       overflow: hidden;
     }
 
-    #iframe {
-      border: none;
-      width: 100%;
-      height: 100%;
-    }
+    #iframe { border: none; width: 100%; height: 100%; }
 
-    /* Controls Bar Styling */
     .controls {
-      height: 70px;
-      background: #1a1a1a;
-      display: flex;
-      align-items: center;
-      justify-content: space-around;
-      padding: 0 10px;
+      height: 70px; background: #1a1a1a;
+      display: flex; align-items: center; justify-content: center;
+      gap: 15px; padding: 0 10px;
       border-top: 1px solid #333;
     }
 
-    .control-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-    }
+    .control-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 
     button {
-      padding: 8px 12px;
-      background: #444;
-      color: white;
-      border: none;
+      padding: 8px 12px; background: #444; color: white;
+      border: none; border-radius: 4px; cursor: pointer;
+    }
+
+    button:hover { background: #555; }
+    button:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    input, select {
+      background: #333; color: white;
+      border: 1px solid #555; text-align: center;
       border-radius: 4px;
-      cursor: pointer;
     }
 
-    button:hover {
-      background: #555;
-    }
+    input[type="number"] { width: 50px; }
+    select { padding: 4px; font-size: 12px; }
 
-    button:disabled {
-      opacity: 0.3;
-      cursor: not-allowed;
-    }
-
-    input[type="number"] {
-      width: 50px;
-      background: #333;
-      color: white;
-      border: 1px solid #555;
-      text-align: center;
-    }
-
-    label {
-      font-size: 10px;
-      color: #888;
-      text-transform: uppercase;
-    }
+    label { font-size: 10px; color: #888; text-transform: uppercase; }
   </style>
 </head>
 
@@ -108,70 +76,59 @@
     </div>
 
     <div class="control-item">
-      <label>Proxy</label>
-      <input id="corsProxy" type="checkbox">
+      <label>Proxy Mode</label>
+      <select id="proxySelect" onchange="changeProxy(this.value)">
+        <option value="none">None</option>
+        <option value="cors-anywhere">CORS Anywhere</option>
+        <option value="google">Google Script</option>
+      </select>
     </div>
   </div>
 
   <script type="text/javascript">
-    /* Your script remains exactly as provided */
-    // --- 1. INITIAL STATE & SETTINGS ---
+    // --- 1. INITIAL STATE ---
     let chapter = parseInt(localStorage.getItem("chapter")) || 1;
-    let isCorsEnabled = localStorage.getItem("cors") === "true";
-    let cors = isCorsEnabled ? "https://cors-anywhere.com/" : "";
-
+    let proxyMode = localStorage.getItem("proxyMode") || "none";
+    
     // UI Elements
     const iframe = document.getElementById("iframe");
     const chapterInput = document.getElementById("chapterInput");
-    const corsCheckbox = document.getElementById("corsProxy");
+    const proxySelect = document.getElementById("proxySelect");
     const backBtn = document.getElementById("back");
 
-    // Sync Checkbox UI on load
-    corsCheckbox.checked = isCorsEnabled;
+    // Sync UI
+    proxySelect.value = proxyMode;
+    document.getElementById("textColor").value = localStorage.getItem("textColor") || "#ffffff";
+    document.getElementById("backgroundColor").value = localStorage.getItem("backgroundColor") || "#000000";
 
+    // --- 2. LOGIC ---
 
-    // CORS Toggle logic
-    corsCheckbox.addEventListener("change", function () {
-      isCorsEnabled = this.checked;
-      localStorage.setItem("cors", isCorsEnabled);
-      cors = isCorsEnabled ? "https://cors-anywhere.com/" : "";
-
-      // Refresh the chapter with the new proxy setting
+    function changeProxy(val) {
+      proxyMode = val;
+      localStorage.setItem("proxyMode", val);
       newThingy(chapter);
-    });
-
-    // --- 2. EVENT LISTENERS ---
-
-    // Logic to change chapters (reusable)
-    function navigate(direction) {
-      if (direction === 'back' && !backBtn.disabled) newThingy(chapter - 1);
-      if (direction === 'next') newThingy(chapter + 1);
     }
-
-    // Global Keyboard Navigation
-    window.addEventListener('keydown', e => {
-      if (e.key === 'ArrowLeft') navigate('back');
-      if (e.key === 'ArrowRight') navigate('next');
-    });
-
-    // Listen for messages from the iframe
-    window.addEventListener('message', e => {
-      if (e.data === 'goBack') navigate('back');
-      if (e.data === 'goNext') navigate('next');
-    });
-
-    // --- 3. CORE FUNCTIONS ---
 
     async function fetchExternalHtml(url) {
       try {
-        // Show loading message inside the iframe
         renderIframe(`Loading Chapter ${chapter}...`, true);
+        
+        let finalUrl = url;
+        let options = { method: 'GET' };
 
-        const response = await fetch(cors + url);
+        // Handle Proxy Selection
+        if (proxyMode === "cors-anywhere") {
+          finalUrl = "https://cors-anywhere.herokuapp.com/" + url;
+        } else if (proxyMode === "google") {
+          const proxyBase = "https://script.google.com/macros/s/AKfycby03WWSHq6xjYdaRkaZcRiaPe8jKf4WevwDkiJrJwWY4nkQYUaBnRF1g_L7Ca33DOi-Mg/exec";
+          finalUrl = `${proxyBase}?url=${encodeURIComponent(url)}`;
+          options.credentials = 'omit'; // Critical for Google Apps Script
+        }
 
-        // Handle CORS Anywhere "Activation" requirement
-        if (response.status === 403 && isCorsEnabled) {
-          renderIframe("CORS Proxy needs activation. <a href='https://cors-anywhere.com/corsdemo' target='_blank' style='color:cyan'>Click here to activate</a> and then refresh this page.", true);
+        const response = await fetch(finalUrl, options);
+
+        if (response.status === 403 && proxyMode === "cors-anywhere") {
+          renderIframe("Proxy activation required. <a href='https://cors-anywhere.herokuapp.com/corsdemo' target='_blank' style='color:cyan'>Click here to activate</a> and refresh.", true);
           return null;
         }
 
@@ -179,93 +136,91 @@
         return await response.text();
       } catch (error) {
         console.error('Fetch error:', error);
-        renderIframe(`Failed to load: ${error.message}. Try toggling the CORS Proxy.`, true);
+        renderIframe(`Failed: ${error.message}. Try changing Proxy Mode.`, true);
         return null;
       }
     }
 
     async function newThingy(ch) {
-      // Update Chapter State
       if (ch !== undefined) chapter = ch;
       if (chapter < 1) chapter = 1;
 
-      // Update LocalStorage & UI
       localStorage.setItem("chapter", chapter);
       chapterInput.value = chapter;
       backBtn.disabled = (chapter <= 1);
 
-      // Fetch Content
-      const url = `https://freewebnovel.com/spare-me-great-lord/chapter-${chapter}`;
+      const url = `https://freewebnovel.com/spare-me-great-lord/chapter-${chapter}.html`;
       const htmlContent = await fetchExternalHtml(url);
 
       if (htmlContent) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(htmlContent, 'text/html');
 
-        // Extraction Logic: Try 'sent' tags first, fallback to standard paragraphs
+        // Target content container for FreeWebNovel
         const contentTags = doc.querySelectorAll('#article p');
         const paragraphs = Array.from(contentTags)
           .slice(1)
           .map(p => p.innerText.trim())
           .filter(text => text.length > 0)
-          .join("\n\n")
+          .join("\n\n");
 
-        renderIframe(paragraphs || "No text content found at this URL.");
+        renderIframe(paragraphs || "No text content found. The site might be blocking the proxy.");
       }
     }
 
     function renderIframe(content, isSystemMessage = false) {
       const textColor = localStorage.getItem("textColor") || "#ffffff";
       const backgroundColor = localStorage.getItem("backgroundColor") || "#000000";
-
       const alignment = isSystemMessage ? "center" : "left";
-      const displayMode = isSystemMessage ? "display:flex; justify-content:center; align-items:center; height:80vh;" : "";
 
       iframe.srcdoc = `
         <html>
-            <head>
-                <style>
-                    body { 
-                        background-color: ${backgroundColor}; 
-                        color: ${textColor}; 
-                        white-space: pre-wrap; 
-                        font-family: 'Segoe UI', Roboto, Helvetica, sans-serif; 
-                        padding: 40px;
-                        font-size: 20px;
-                        line-height: 1.7;
-                        max-width: 750px;
-                        margin: 0 auto;
-                        text-align: ${alignment};
-                        ${displayMode}
-                        cursor: text;
-                    }
-                </style>
-            </head>
-            <body>
-                ${content}
-                <script>
-                    window.addEventListener('keydown', e => {
-                        if (e.key === 'ArrowLeft') window.parent.postMessage('goBack', '*');
-                        if (e.key === 'ArrowRight') window.parent.postMessage('goNext', '*');
-                    });
-                <\/script>
-            </body>
+          <head>
+            <style>
+              body { 
+                background-color: ${backgroundColor}; 
+                color: ${textColor}; 
+                white-space: pre-wrap; 
+                font-family: sans-serif; 
+                padding: 40px; font-size: 20px; line-height: 1.7;
+                max-width: 800px; margin: 0 auto;
+                text-align: ${alignment};
+              }
+              a { color: cyan; }
+            </style>
+          </head>
+          <body>
+            ${content}
+            <script>
+              window.addEventListener('keydown', e => {
+                if (e.key === 'ArrowLeft') window.parent.postMessage('goBack', '*');
+                if (e.key === 'ArrowRight') window.parent.postMessage('goNext', '*');
+              });
+            <\/script>
+          </body>
         </html>`;
     }
 
-    // Helper to change colors and update immediately
     function changeColor(type, value) {
       localStorage.setItem(type, value);
-      if (type === "backgroundColor") {
-        document.body.style.backgroundColor = value;
-      }
-      // Re-render the current content with new colors
-      newThingy(chapter);
+      if (type === "backgroundColor") document.body.style.backgroundColor = value;
+      // Re-render only if content exists
+      renderIframe(iframe.srcdoc.split('<body>')[1].split('<script>')[0].trim());
     }
 
-    // START THE APP
+    // Keyboard & Message Listeners
+    window.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft' && chapter > 1) newThingy(chapter - 1);
+      if (e.key === 'ArrowRight') newThingy(chapter + 1);
+    });
+
+    window.addEventListener('message', e => {
+      if (e.data === 'goBack' && chapter > 1) newThingy(chapter - 1);
+      if (e.data === 'goNext') newThingy(chapter + 1);
+    });
+
+    // Init
     newThingy(chapter);
   </script>
 </body>
-
 </html>
