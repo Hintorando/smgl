@@ -1,211 +1,271 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chapter Reader</title>
-    <style type="text/css">
-        * { box-sizing: border-box; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter Reader</title>
+  <style type="text/css">
+    /* Reset and Grid Layout */
+    * {
+      box-sizing: border-box;
+    }
 
-        body {
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            width: 100%;
-            background-color: black;
-            color: white;
-            font-family: sans-serif;
-            display: grid;
-            /* Same layout as your first version: Content takes all space, controls take 70px */
-            grid-template-rows: 1fr 70px; 
-            overflow: hidden;
-        }
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      width: 100%;
+      background-color: black;
+      color: white;
+      font-family: sans-serif;
+      display: grid;
+      /* Reader takes available space, controls take exactly 70px */
+      grid-template-rows: 1fr 70px;
+      overflow: hidden;
+    }
 
-        #iframe {
-            border: none;
-            width: 100%;
-            height: 100%;
-        }
+    #iframe {
+      border: none;
+      width: 100%;
+      height: 100%;
+    }
 
-        .controls {
-            height: 70px;
-            background: #1a1a1a;
-            display: flex;
-            align-items: center;
-            justify-content: space-around;
-            padding: 0 10px;
-            border-top: 1px solid #333;
-        }
+    /* Controls Bar Styling */
+    .controls {
+      height: 70px;
+      background: #1a1a1a;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 0 10px;
+      border-top: 1px solid #333;
+    }
 
-        .control-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 2px;
-        }
+    .control-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
 
-        button {
-            padding: 8px 12px;
-            background: #444;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
+    button {
+      padding: 8px 12px;
+      background: #444;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
 
-        button:disabled { opacity: 0.3; cursor: not-allowed; }
+    button:hover {
+      background: #555;
+    }
 
-        input[type="number"] {
-            width: 60px;
-            background: #333;
-            color: white;
-            border: 1px solid #555;
-            text-align: center;
-            padding: 4px;
-        }
+    button:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
 
-        label {
-            font-size: 10px;
-            color: #888;
-            text-transform: uppercase;
-        }
-    </style>
+    input[type="number"] {
+      width: 50px;
+      background: #333;
+      color: white;
+      border: 1px solid #555;
+      text-align: center;
+    }
+
+    label {
+      font-size: 10px;
+      color: #888;
+      text-transform: uppercase;
+    }
+  </style>
 </head>
 
 <body>
-    <iframe id="iframe"></iframe>
 
-    <div class="controls">
-        <button onclick="newThingy(chapter - 1)" id="back">Prev</button>
-        
-        <div class="control-item">
-            <label>CH</label>
-            <input id="chapterInput" type="number" onchange="newThingy(parseInt(this.value))">
-        </div>
+  <iframe id="iframe"></iframe>
 
-        <button onclick="newThingy(chapter + 1)" id="next">Next</button>
+  <div class="controls">
+    <button onclick="newThingy(chapter - 1)" id="back">Prev</button>
 
-        <div class="control-item">
-            <label>Text</label>
-            <input id="textColor" type="color" onchange="changeColor('textColor', this.value)">
-        </div>
-
-        <div class="control-item">
-            <label>BG</label>
-            <input id="backgroundColor" type="color" onchange="changeColor('backgroundColor', this.value)">
-        </div>
-
-        <div class="control-item">
-            <label>Proxy</label>
-            <input id="corsProxy" type="checkbox">
-        </div>
+    <div class="control-item">
+      <label>CH</label>
+      <input id="chapterInput" type="number" onchange="newThingy(parseInt(this.value))">
     </div>
 
-    <script type="text/javascript">
-        // 1. STATE MANAGEMENT
-        let chapter = parseInt(localStorage.getItem("chapter")) || 1;
-        let isCorsEnabled = localStorage.getItem("cors") === "true";
-        // Using the proxy URL from your first version as it's often more reliable
-        let proxyPrefix = isCorsEnabled ? "https://api.codetabs.com/v1/proxy?quest=" : "";
+    <button onclick="newThingy(chapter + 1)" id="next">Next</button>
 
-        const iframe = document.getElementById("iframe");
-        const chapterInput = document.getElementById("chapterInput");
-        const corsCheckbox = document.getElementById("corsProxy");
-        const backBtn = document.getElementById("back");
+    <div class="control-item">
+      <label>Text</label>
+      <input id="textColor" type="color" onchange="changeColor('textColor', this.value)">
+    </div>
 
-        // Set initial UI values
-        corsCheckbox.checked = isCorsEnabled;
-        chapterInput.value = chapter;
-        document.getElementById("textColor").value = localStorage.getItem("textColor") || "#ffffff";
-        document.getElementById("backgroundColor").value = localStorage.getItem("backgroundColor") || "#000000";
+    <div class="control-item">
+      <label>BG</label>
+      <input id="backgroundColor" type="color" onchange="changeColor('backgroundColor', this.value)">
+    </div>
 
-        // 2. PROXY LOGIC
-        corsCheckbox.addEventListener("change", function () {
-            isCorsEnabled = this.checked;
-            localStorage.setItem("cors", isCorsEnabled);
-            proxyPrefix = isCorsEnabled ? "https://api.codetabs.com/v1/proxy?quest=" : "";
-            newThingy(chapter);
-        });
+    <div class="control-item">
+      <label>Proxy</label>
+      <input id="corsProxy" type="checkbox">
+    </div>
+  </div>
 
-        // 3. CORE FUNCTIONS
-        async function fetchExternalHtml(url) {
-            try {
-                renderIframe("Loading...", true);
-                const response = await fetch(proxyPrefix + encodeURIComponent(url));
-                if (!response.ok) throw new Error("Network error or Proxy required");
-                return await response.text();
-            } catch (e) {
-                renderIframe("Error loading content. Try enabling the Proxy.", true);
-                return null;
-            }
+  <script type="text/javascript">
+    /* Your script remains exactly as provided */
+    // --- 1. INITIAL STATE & SETTINGS ---
+    let chapter = parseInt(localStorage.getItem("chapter")) || 1;
+    let isCorsEnabled = localStorage.getItem("cors") === "true";
+    let cors = isCorsEnabled ? "https://cors-anywhere.com/" : "";
+
+    // UI Elements
+    const iframe = document.getElementById("iframe");
+    const chapterInput = document.getElementById("chapterInput");
+    const corsCheckbox = document.getElementById("corsProxy");
+    const backBtn = document.getElementById("back");
+
+    // Sync Checkbox UI on load
+    corsCheckbox.checked = isCorsEnabled;
+
+
+    // CORS Toggle logic
+    corsCheckbox.addEventListener("change", function () {
+      isCorsEnabled = this.checked;
+      localStorage.setItem("cors", isCorsEnabled);
+      cors = isCorsEnabled ? "https://cors-anywhere.com/" : "";
+
+      // Refresh the chapter with the new proxy setting
+      newThingy(chapter);
+    });
+
+    // --- 2. EVENT LISTENERS ---
+
+    // Logic to change chapters (reusable)
+    function navigate(direction) {
+      if (direction === 'back' && !backBtn.disabled) newThingy(chapter - 1);
+      if (direction === 'next') newThingy(chapter + 1);
+    }
+
+    // Global Keyboard Navigation
+    window.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft') navigate('back');
+      if (e.key === 'ArrowRight') navigate('next');
+    });
+
+    // Listen for messages from the iframe
+    window.addEventListener('message', e => {
+      if (e.data === 'goBack') navigate('back');
+      if (e.data === 'goNext') navigate('next');
+    });
+
+    // --- 3. CORE FUNCTIONS ---
+
+    async function fetchExternalHtml(url) {
+      try {
+        // Show loading message inside the iframe
+        renderIframe(`Loading Chapter ${chapter}...`, true);
+
+        const response = await fetch(cors + url);
+
+        // Handle CORS Anywhere "Activation" requirement
+        if (response.status === 403 && isCorsEnabled) {
+          renderIframe("CORS Proxy needs activation. <a href='https://cors-anywhere.com/corsdemo' target='_blank' style='color:cyan'>Click here to activate</a> and then refresh this page.", true);
+          return null;
         }
 
-        async function newThingy(ch) {
-            if (ch !== undefined) chapter = ch;
-            if (chapter < 1) chapter = 1;
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.text();
+      } catch (error) {
+        console.error('Fetch error:', error);
+        renderIframe(`Failed to load: ${error.message}. Try toggling the CORS Proxy.`, true);
+        return null;
+      }
+    }
 
-            localStorage.setItem("chapter", chapter);
-            chapterInput.value = chapter;
-            backBtn.disabled = (chapter <= 1);
+    async function newThingy(ch) {
+      // Update Chapter State
+      if (ch !== undefined) chapter = ch;
+      if (chapter < 1) chapter = 1;
 
-            // The URL for the second site
-            const url = `https://freewebnovel.com/spare-me-great-lord/chapter-${chapter}.html`;
-            const htmlContent = await fetchExternalHtml(url);
+      // Update LocalStorage & UI
+      localStorage.setItem("chapter", chapter);
+      chapterInput.value = chapter;
+      backBtn.disabled = (chapter <= 1);
 
-            if (htmlContent) {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(htmlContent, "text/html");
-                
-                // Select paragraphs inside #article, skip the first one
-                const contentTags = doc.querySelectorAll('#article p');
-                const paragraphs = Array.from(contentTags)
-                    .slice(1) 
-                    .map(p => p.innerText.trim())
-                    .filter(text => text.length > 0)
-                    .join("\n\n");
+      // Fetch Content
+      const url = `https://freewebnovel.com/spare-me-great-lord/chapter-${chapter}`;
+      const htmlContent = await fetchExternalHtml(url);
 
-                renderIframe(paragraphs || "No content found.");
-            }
-        }
+      if (htmlContent) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlContent, 'text/html');
 
-        function renderIframe(content, isSystem = false) {
-            const textColor = localStorage.getItem("textColor") || "#ffffff";
-            const backgroundColor = localStorage.getItem("backgroundColor") || "#000000";
-            
-            iframe.srcdoc = `
-                <html>
-                <head>
-                    <style>
-                        body {
-                            background: ${backgroundColor};
-                            color: ${textColor};
-                            white-space: pre-wrap;
-                            font-family: sans-serif;
-                            padding: 30px;
-                            font-size: 18px;
-                            line-height: 1.6;
-                            ${isSystem ? "display:flex; justify-content:center; align-items:center; height:90vh;" : ""}
-                        }
-                    </style>
-                </head>
-                <body>${content}</body>
-                </html>`;
-        }
+        // Extraction Logic: Try 'sent' tags first, fallback to standard paragraphs
+        const contentTags = doc.querySelectorAll('#article p');
+        const paragraphs = Array.from(contentTags)
+          .slice(1)
+          .map(p => p.innerText.trim())
+          .filter(text => text.length > 0)
+          .join("\n\n")
 
-        function changeColor(type, value) {
-            localStorage.setItem(type, value);
-            // Re-render immediately to show color change
-            renderIframe(iframe.contentDocument.body.innerText); 
-        }
+        renderIframe(paragraphs || "No text content found at this URL.");
+      }
+    }
 
-        // 4. KEYBOARD NAVIGATION
-        window.addEventListener("keydown", function (e) {
-            if (e.key === "ArrowLeft") newThingy(chapter - 1);
-            if (e.key === "ArrowRight") newThingy(chapter + 1);
-        });
+    function renderIframe(content, isSystemMessage = false) {
+      const textColor = localStorage.getItem("textColor") || "#ffffff";
+      const backgroundColor = localStorage.getItem("backgroundColor") || "#000000";
 
-        // Initialize
-        newThingy(chapter);
-    </script>
+      const alignment = isSystemMessage ? "center" : "left";
+      const displayMode = isSystemMessage ? "display:flex; justify-content:center; align-items:center; height:80vh;" : "";
+
+      iframe.srcdoc = `
+        <html>
+            <head>
+                <style>
+                    body { 
+                        background-color: ${backgroundColor}; 
+                        color: ${textColor}; 
+                        white-space: pre-wrap; 
+                        font-family: 'Segoe UI', Roboto, Helvetica, sans-serif; 
+                        padding: 40px;
+                        font-size: 20px;
+                        line-height: 1.7;
+                        max-width: 750px;
+                        margin: 0 auto;
+                        text-align: ${alignment};
+                        ${displayMode}
+                        cursor: text;
+                    }
+                </style>
+            </head>
+            <body>
+                ${content}
+                <script>
+                    window.addEventListener('keydown', e => {
+                        if (e.key === 'ArrowLeft') window.parent.postMessage('goBack', '*');
+                        if (e.key === 'ArrowRight') window.parent.postMessage('goNext', '*');
+                    });
+                <\/script>
+            </body>
+        </html>`;
+    }
+
+    // Helper to change colors and update immediately
+    function changeColor(type, value) {
+      localStorage.setItem(type, value);
+      if (type === "backgroundColor") {
+        document.body.style.backgroundColor = value;
+      }
+      // Re-render the current content with new colors
+      newThingy(chapter);
+    }
+
+    // START THE APP
+    newThingy(chapter);
+  </script>
 </body>
+
 </html>
