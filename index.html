@@ -117,8 +117,8 @@
         let options = { method: 'GET' };
 
         // Handle Proxy Selection
-        if (proxyMode === "cors-anywhere") {
-          finalUrl = "https://cors-anywhere.herokuapp.com/" + url;
+        if (proxyMode === "codetabs") {
+          finalUrl = "https://api.codetabs.com/v1/proxy?quest=" + url;
         } else if (proxyMode === "google") {
           const proxyBase = "https://script.google.com/macros/s/AKfycby03WWSHq6xjYdaRkaZcRiaPe8jKf4WevwDkiJrJwWY4nkQYUaBnRF1g_L7Ca33DOi-Mg/exec";
           finalUrl = `${proxyBase}?url=${encodeURIComponent(url)}`;
@@ -224,3 +224,4 @@
   </script>
 </body>
 </html>
+
