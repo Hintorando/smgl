@@ -2,226 +2,284 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chapter Reader</title>
-  <style type="text/css">
-    /* Reset and Grid Layout */
-    * { box-sizing: border-box; }
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Chapter Reader</title>
+	<style>
+		* {
+			box-sizing: border-box;
+		}
 
-    body {
-      margin: 0; padding: 0;
-      height: 100vh; width: 100%;
-      background-color: black; color: white;
-      font-family: sans-serif;
-      display: grid;
-      grid-template-rows: 1fr 70px;
-      overflow: hidden;
-    }
+		body {
+			margin: 0;
+			padding: 0;
+			height: 100vh;
+			width: 100%;
+			background-color: black;
+			color: white;
+			font-family: sans-serif;
+			display: grid;
+			grid-template-rows: 1fr 70px;
+			overflow: hidden;
+		}
 
-    #iframe { border: none; width: 100%; height: 100%; }
+		#iframe {
+			border: none;
+			width: 100%;
+			height: 100%;
+		}
 
-    .controls {
-      height: 70px; background: #1a1a1a;
-      display: flex; align-items: center; justify-content: center;
-      gap: 15px; padding: 0 10px;
-      border-top: 1px solid #333;
-    }
+		.controls {
+			height: 70px;
+			background: #1a1a1a;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 15px;
+			padding: 0 10px;
+			border-top: 1px solid #333;
+		}
 
-    .control-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+		.control-item {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 2px;
+		}
 
-    button {
-      padding: 8px 12px; background: #444; color: white;
-      border: none; border-radius: 4px; cursor: pointer;
-    }
+		button {
+			padding: 8px 16px;
+			background: #333;
+			color: white;
+			border: 1px solid #555;
+			border-radius: 4px;
+			cursor: pointer;
+			font-weight: bold;
+		}
 
-    button:hover { background: #555; }
-    button:disabled { opacity: 0.3; cursor: not-allowed; }
+		button:hover {
+			background: #444;
+		}
 
-    input, select {
-      background: #333; color: white;
-      border: 1px solid #555; text-align: center;
-      border-radius: 4px;
-    }
+		button:active {
+			background: #222;
+		}
 
-    input[type="number"] { width: 50px; }
-    select { padding: 4px; font-size: 12px; }
+		input,
+		select {
+			background: #222;
+			color: white;
+			border: 1px solid #555;
+			text-align: center;
+			border-radius: 4px;
+			padding: 4px;
+		}
 
-    label { font-size: 10px; color: #888; text-transform: uppercase; }
-  </style>
+		input[type="number"] {
+			width: 60px;
+		}
+
+		input[type="color"] {
+			width: 40px;
+			height: 25px;
+			cursor: pointer;
+			padding: 0;
+		}
+
+		select {
+			font-size: 12px;
+		}
+
+		label {
+			font-size: 10px;
+			color: #888;
+			text-transform: uppercase;
+			letter-spacing: 1px;
+		}
+	</style>
 </head>
 
 <body>
 
-  <iframe id="iframe"></iframe>
+	<iframe id="iframe"></iframe>
 
-  <div class="controls">
-    <button onclick="newThingy(chapter - 1)" id="back">Prev</button>
+	<div class="controls">
+		<button id="backButton" onclick="getChapter(storedData.chapter - 1)">Prev</button>
 
-    <div class="control-item">
-      <label>CH</label>
-      <input id="chapterInput" type="number" onchange="newThingy(parseInt(this.value))">
+		<div class="control-item">
+			<label>CH</label>
+			<input id="chapterInput" type="number" onchange="getChapter(parseInt(this.value))">
     </div>
 
-    <button onclick="newThingy(chapter + 1)" id="next">Next</button>
+			<button onclick="getChapter(storedData.chapter + 1)">Next</button>
 
-    <div class="control-item">
-      <label>Text</label>
-      <input id="textColor" type="color" onchange="changeColor('textColor', this.value)">
+			<div class="control-item">
+				<label>Text</label>
+				<input id="textColor" type="color" onchange="saveStoredData('textColor', this.value)">
     </div>
 
-    <div class="control-item">
-      <label>BG</label>
-      <input id="backgroundColor" type="color" onchange="changeColor('backgroundColor', this.value)">
+				<div class="control-item">
+					<label>BG</label>
+					<input id="backgroundColor" type="color" onchange="saveStoredData('backgroundColor', this.value)">
     </div>
 
-    <div class="control-item">
-      <label>Proxy Mode</label>
-      <select id="proxySelect" onchange="changeProxy(this.value)">
+					<div class="control-item">
+						<label>Proxy</label>
+						<select id="proxySelect" onchange="saveStoredData('fetcher', this.value)">
         <option value="none">None</option>
-        <option value="codetabs">CodeTabs</option>
-        <option value="google">Google Script</option>
+        <option value="codeTabs">CodeTabs</option>
+        <option value="googleProxy">Google Proxy</option>
       </select>
-    </div>
-  </div>
+					</div>
+				</div>
 
-  <script type="text/javascript">
-    // --- 1. INITIAL STATE ---
-    let chapter = parseInt(localStorage.getItem("chapter")) || 1;
-    let proxyMode = localStorage.getItem("proxyMode") || "none";
-    
-    // UI Elements
-    const iframe = document.getElementById("iframe");
-    const chapterInput = document.getElementById("chapterInput");
-    const proxySelect = document.getElementById("proxySelect");
-    const backBtn = document.getElementById("back");
-
-    // Sync UI
-    proxySelect.value = proxyMode;
-    document.getElementById("textColor").value = localStorage.getItem("textColor") || "#ffffff";
-    document.getElementById("backgroundColor").value = localStorage.getItem("backgroundColor") || "#000000";
-
-    // --- 2. LOGIC ---
-
-    function changeProxy(val) {
-      proxyMode = val;
-      localStorage.setItem("proxyMode", val);
-      newThingy(chapter);
-    }
-
-    async function fetchExternalHtml(url) {
-      try {
-        renderIframe(`Loading Chapter ${chapter}...`, true);
-        
-        let finalUrl = url;
-        let options = { method: 'GET' };
-
-        // Handle Proxy Selection
-        if (proxyMode === "codetabs") {
-          finalUrl = "https://api.codetabs.com/v1/proxy?quest=" + url;
-        } else if (proxyMode === "google") {
-          const proxyBase = "https://script.google.com/macros/s/AKfycby03WWSHq6xjYdaRkaZcRiaPe8jKf4WevwDkiJrJwWY4nkQYUaBnRF1g_L7Ca33DOi-Mg/exec";
-          finalUrl = `${proxyBase}?url=${encodeURIComponent(url)}`;
-          options.credentials = 'omit'; // Critical for Google Apps Script
-        }
-
-        const response = await fetch(finalUrl, options);
-
-        if (response.status === 403 && proxyMode === "codetabs") {
-          renderIframe("oops didnt work", true);
-          return null;
-        }
-
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return await response.text();
-      } catch (error) {
-        console.error('Fetch error:', error);
-        renderIframe(`Failed: ${error.message}. Try changing Proxy Mode.`, true);
-        return null;
-      }
-    }
-
-    async function newThingy(ch) {
-      if (ch !== undefined) chapter = ch;
-      if (chapter < 1) chapter = 1;
-
-      localStorage.setItem("chapter", chapter);
-      chapterInput.value = chapter;
-      backBtn.disabled = (chapter <= 1);
-
-      const url = `https://freewebnovel.com/spare-me-great-lord/chapter-${chapter}.html`;
-      const htmlContent = await fetchExternalHtml(url);
-
-      if (htmlContent) {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(htmlContent, 'text/html');
-
-        // Target content container for FreeWebNovel
-        const contentTags = doc.querySelectorAll('#article p');
-        const paragraphs = Array.from(contentTags)
-          .slice(1)
-          .map(p => p.innerText.trim())
-          .filter(text => text.length > 0)
-          .join("\n\n");
-
-        renderIframe(paragraphs || "No text content found. The site might be blocking the proxy.");
-      }
-    }
-
-    function renderIframe(content, isSystemMessage = false) {
-      const textColor = localStorage.getItem("textColor") || "#ffffff";
-      const backgroundColor = localStorage.getItem("backgroundColor") || "#000000";
-      const alignment = isSystemMessage ? "center" : "left";
-
-      iframe.srcdoc = `
-        <html>
-          <head>
-            <style>
-              body { 
-                background-color: ${backgroundColor}; 
-                color: ${textColor}; 
-                white-space: pre-wrap; 
-                font-family: sans-serif; 
-                padding: 40px; font-size: 20px; line-height: 1.7;
-                max-width: 800px; margin: 0 auto;
-                text-align: ${alignment};
-              }
-              a { color: cyan; }
-            </style>
-          </head>
-          <body>
-            ${content}
-            <script>
-              window.addEventListener('keydown', e => {
-                if (e.key === 'ArrowLeft') window.parent.postMessage('goBack', '*');
-                if (e.key === 'ArrowRight') window.parent.postMessage('goNext', '*');
-              });
-            <\/script>
-          </body>
-        </html>`;
-    }
-
-    function changeColor(type, value) {
-      localStorage.setItem(type, value);
-      if (type === "backgroundColor") document.body.style.backgroundColor = value;
-      // Re-render only if content exists
-      renderIframe(iframe.srcdoc.split('<body>')[1].split('<script>')[0].trim());
-    }
-
-    // Keyboard & Message Listeners
-    window.addEventListener('keydown', e => {
-      if (e.key === 'ArrowLeft' && chapter > 1) newThingy(chapter - 1);
-      if (e.key === 'ArrowRight') newThingy(chapter + 1);
-    });
-
-    window.addEventListener('message', e => {
-      if (e.data === 'goBack' && chapter > 1) newThingy(chapter - 1);
-      if (e.data === 'goNext') newThingy(chapter + 1);
-    });
-
-    // Init
-    newThingy(chapter);
-  </script>
+				<script>
+		const storedData = JSON.parse(localStorage.getItem("readerOptions")) || {
+		textColor: "#999999",
+		backgroundColor: "#272727",
+		fetcher: "none",
+		chapter: 1,
+		};
+		
+		const iframe = document.getElementById("iframe");
+		
+		const backButton = document.getElementById("backButton");
+		const chapterInput = document.getElementById("chapterInput");
+		
+		function syncUI() {
+		document.getElementById("chapterInput").value = storedData.chapter;
+		document.getElementById("textColor").value = storedData.textColor;
+		document.getElementById("backgroundColor").value = storedData.backgroundColor;
+		document.getElementById("proxySelect").value = storedData.fetcher;
+		}
+		
+		// not mine, couldnt even think of an answer that worked
+		function removeWatermark(text) {
+		let normalized = text.normalize("NFKD");
+		normalized = normalized.replace(/[\u0300-\u036f]/g, "");
+		normalized = normalized.replace(/[\u200B-\u200D\uFEFF]/g, "");
+		normalized = normalized.replace(/f\s*r\s*e\s*e\s*w\s*e\s*b\s*n\s*o\s*v\s*e\s*l\s*\.?\s*c\s*o\s*m/gi, "");
+		
+		return normalized.trim();
+		}
+		
+		function saveStoredData(attribute, value) {
+		storedData[attribute] = value;
+		localStorage.setItem("readerOptions", JSON.stringify(storedData));
+		}
+		
+		function renderIframe(html) {
+		const backgroundColor = storedData.backgroundColor;
+		const textColor = storedData.textColor;
+		iframe.srcdoc = `
+		<html lang="en">
+		
+		<head>
+			<style>
+				body {
+					background-color: ${backgroundColor};
+					color: ${textColor};
+					white-space: pre-wrap;
+					font-family: sans-serif;
+					padding: 40px;
+					font-size: 20px;
+					line-height: 1.7;
+					max-width: 800px;
+					margin: 0;
+				}
+		
+				a {
+					color: cyan;
+				}
+			</style>
+		</head>
+		
+		<body>
+			${html}
+			<script>
+				window.addEventListener('keydown', e => {
+		                if (e.key === 'ArrowLeft') window.parent.postMessage('goBack', '*');
+		                if (e.key === 'ArrowRight') window.parent.postMessage('goNext', '*');
+		            });
+		        <\/script>
+		    </body>
+		
+		    </html>`;
+		}
+		
+		window.addEventListener("keydown", (e) => {
+		  if (e.key === "ArrowLeft" && storedData.chapter > 1)
+		    getChapter(storedData.chapter - 1);
+		  if (e.key === "ArrowRight") getChapter(storedData.chapter + 1);
+		});
+		
+		window.addEventListener("message", (e) => {
+		  if (e.data === "goBack" && storedData.chapter > 1)
+		    getChapter(storedData.chapter - 1);
+		  if (e.data === "goNext") getChapter(storedData.chapter + 1);
+		});
+		
+		async function fetchUrl(url) {
+		  try {
+		    let finalUrl;
+		    let options = { method: "GET" };
+		    switch (storedData.fetcher) {
+		      case "none":
+		        finalUrl = url;
+		        break;
+		
+		      case "codeTabs":
+		        finalUrl = "https://api.codetabs.com/v1/proxy?quest=" + url;
+		        break;
+		
+		      case "googleProxy":
+		        finalUrl =
+		          "https://script.google.com/macros/s/AKfycby03WWSHq6xjYdaRkaZcRiaPe8jKf4WevwDkiJrJwWY4nkQYUaBnRF1g_L7Ca33DOi-Mg/exec?url=" +
+		          encodeURIComponent(url);
+		        options.credentials = "omit";
+		        break;
+		    }
+		    const htmlText = await fetch(finalUrl, options);
+		
+		    if (htmlText.status === 403) {
+		      console.error("oops i dont know whats happening");
+		    }
+		    return await htmlText.text();
+		  } catch (error) {
+		    console.error("fetch error: ", error);
+		    renderIframe(`failed: ${error} try again or sometime else`);
+		    return null;
+		  }
+		}
+		
+		async function getChapter(chapter) {
+		  if (chapter !== undefined) if (chapter < 1) chapter = 1;
+		  storedData.chapter = chapter
+		  chapterInput.value = chapter
+		  backButton.disabled = (chapter <= 1);
+		
+		  saveStoredData("chapter", chapter);
+		
+		  const url = "https://freewebnovel.com/spare-me-great-lord/chapter-" + chapter;
+		  const htmlContent = await fetchUrl(url);
+		  let novelText;
+		  if (htmlContent) {
+		    const parser = new DOMParser();
+		    const doc = parser.parseFromString(htmlContent, "text/html");
+		
+		    const contentTags = doc.querySelectorAll("#article p");
+		    novelText = Array.from(contentTags)
+		      .slice(1)
+		      .map((p) => p.innerText.trim())
+		      .filter((text) => text.length > 0)
+		      .join("\n\n");
+		    novelText = removeWatermark(novelText)
+		  }
+		  renderIframe(novelText || "No content found");
+		}
+		syncUI()
+		getChapter(storedData.chapter);
+        </script>
 </body>
-</html>
 
+</html>
